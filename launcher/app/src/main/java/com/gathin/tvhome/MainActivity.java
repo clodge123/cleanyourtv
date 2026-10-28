@@ -1803,14 +1803,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int sw = getResources().getDisplayMetrics().widthPixels;
             int sh = getResources().getDisplayMetrics().heightPixels;
             if (sw <= 0 || sh <= 0) return;
-            float x0 = (loc[0] + hero.getX()) / (float) sw;
-            // The hero row itself is thin (icon + app name above the dock). Grow the
-            // band upward into the empty wallpaper space so the overlay panel has a
-            // usable canvas, and widen it to a readable minimum.
-            float grow = 0.30f;
-            float y0 = Math.max(0f, (loc[1] + hero.getY()) / (float) sh - grow);
-            float h0 = Math.min(1f - y0, Math.max(hero.getHeight(), (int) (26 * density)) / (float) sh + grow);
-            float w0 = Math.max(hero.getWidth() / (float) sw, 0.34f);
+            // Thin band that sits ABOVE the hero app name and spans the launcher's
+            // content width (68dp side padding, same as the dock/header), so it never
+            // covers the app name. Height is fixed and slim.
+            float pad = 68f * density;
+            float bandH = 0.26f;
+            float heroTop = (loc[1] + hero.getY()) / (float) sh;
+            float x0 = pad / (float) sw;
+            float w0 = ((float) sw - 2f * pad) / (float) sw;
+            float y0 = Math.max(0.02f, heroTop - bandH - 0.01f);
+            float h0 = Math.min(bandH, 1f - y0);
             org.json.JSONObject b = new org.json.JSONObject();
             b.put("x", x0); b.put("y", y0); b.put("w", w0); b.put("h", h0);
             getContentResolver().call(
