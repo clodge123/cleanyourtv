@@ -1803,16 +1803,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int sw = getResources().getDisplayMetrics().widthPixels;
             int sh = getResources().getDisplayMetrics().heightPixels;
             if (sw <= 0 || sh <= 0) return;
-            // Thin band that sits ABOVE the hero app name and spans the launcher's
-            // content width (68dp side padding, same as the dock/header), so it never
-            // covers the app name. Height is fixed and slim.
+            // Thin band ABOVE the hero app name, full content width (68dp padding).
+            // Anchored to FIXED screen geometry (the dock row never scrolls), not to
+            // hero.getY(), which drifts with grid scroll and dragged the panel down
+            // the screen. The band must be static: same pixels no matter what scrolls.
             float pad = 68f * density;
             float bandH = 0.26f;
-            float heroTop = (loc[1] + hero.getY()) / (float) sh;
+            View dockChild = grid.getChildAt(0);
+            int dockRowH = (dockChild != null && dockChild.getHeight() > 0)
+                ? dockChild.getHeight() : (int) (114 * density);
+            int dockTopPx = root.getHeight() - dockRowH - grid.getPaddingBottom();
+            int nameH = hero.getHeight() > 0 ? hero.getHeight() : (int) (64 * density);
+            float y0 = (dockTopPx - nameH - bandH * sh) / (float) sh;
+            y0 = Math.max(0.02f, Math.min(y0, 1f - bandH));
             float x0 = pad / (float) sw;
             float w0 = ((float) sw - 2f * pad) / (float) sw;
-            float y0 = Math.max(0.02f, heroTop - bandH - 0.01f);
-            float h0 = Math.min(bandH, 1f - y0);
+            float h0 = bandH;
             org.json.JSONObject b = new org.json.JSONObject();
             b.put("x", x0); b.put("y", y0); b.put("w", w0); b.put("h", h0);
             getContentResolver().call(
