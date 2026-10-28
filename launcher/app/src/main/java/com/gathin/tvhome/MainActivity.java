@@ -1804,9 +1804,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int sh = getResources().getDisplayMetrics().heightPixels;
             if (sw <= 0 || sh <= 0) return;
             float x0 = (loc[0] + hero.getX()) / (float) sw;
-            float y0 = (loc[1] + hero.getY()) / (float) sh;
-            float w0 = hero.getWidth() / (float) sw;
-            float h0 = Math.max(hero.getHeight(), (int) (26 * density)) / (float) sh;
+            // The hero row itself is thin (icon + app name above the dock). Grow the
+            // band upward into the empty wallpaper space so the overlay panel has a
+            // usable canvas, and widen it to a readable minimum.
+            float grow = 0.30f;
+            float y0 = Math.max(0f, (loc[1] + hero.getY()) / (float) sh - grow);
+            float h0 = Math.min(1f - y0, Math.max(hero.getHeight(), (int) (26 * density)) / (float) sh + grow);
+            float w0 = Math.max(hero.getWidth() / (float) sw, 0.34f);
             org.json.JSONObject b = new org.json.JSONObject();
             b.put("x", x0); b.put("y", y0); b.put("w", w0); b.put("h", h0);
             getContentResolver().call(
