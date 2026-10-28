@@ -1787,6 +1787,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 ambient.animate().alpha(1f).setDuration(600).start();
             }
         }
+        reportHeroBounds();
+    }
+
+    /**
+     * ShieldClaw hook: publish the hero band's normalized bounds to the node app's
+     * StatusProvider (content://com.shieldclaw.node.status, method "setHeroBounds")
+     * so its overlay panel sits exactly in the launcher's free space. No-op when
+     * the ShieldClaw app is not installed.
+     */
+    private void reportHeroBounds() {
+        try {
+            int[] loc = new int[2];
+            root.getLocationInWindow(loc);
+            int sw = getResources().getDisplayMetrics().widthPixels;
+            int sh = getResources().getDisplayMetrics().heightPixels;
+            if (sw <= 0 || sh <= 0) return;
+            float x0 = (loc[0] + hero.getX()) / (float) sw;
+            float y0 = (loc[1] + hero.getY()) / (float) sh;
+            float w0 = hero.getWidth() / (float) sw;
+            float h0 = Math.max(hero.getHeight(), (int) (26 * density)) / (float) sh;
+            org.json.JSONObject b = new org.json.JSONObject();
+            b.put("x", x0); b.put("y", y0); b.put("w", w0); b.put("h", h0);
+            getContentResolver().call(
+                android.net.Uri.parse("content://com.shieldclaw.node.status"),
+                "setHeroBounds", b.toString(), null);
+        } catch (Exception ignored) {
+            // provider absent (app not installed) - nothing to do
+        }
     }
 
     /** The shelf's text for this dock app: its name and, on the cinematic shelf, "Last opened" and the dots. */
