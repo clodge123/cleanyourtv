@@ -242,7 +242,7 @@ public final class JarvisManager implements GatewayNode.Listener {
                 case "speak": {
                     String text = str(params, "text");
                     if (text != null) {
-                        handler.post(() => speak(text));
+                        handler.post(() -> speak(text));
                         gateway.respond(invokeId, true, new com.google.gson.JsonObject(), null);
                     } else {
                         gateway.respond(invokeId, false, null, "missing text");
