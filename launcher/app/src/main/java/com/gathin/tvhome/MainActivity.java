@@ -428,6 +428,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         coocaaSources = cfg.coocaaSources;
 
         root = findViewById(R.id.root);
+        // Jarvis: native OpenClaw brain (gateway node + hero panel + voice).
+        com.gathin.tvhome.jarvis.JarvisManager.init(this, root);
         root.setBackgroundColor(cfg.backgroundColor);
         // root fills the window with an opaque colour (Config keeps background_color opaque), so the window's own
         // black under it is a second full-screen fill on every frame for nothing. The starting window still uses
@@ -1259,6 +1261,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        // Mic button -> Jarvis voice (the launcher owns the whole voice path now).
+        if (event.getKeyCode() == KeyEvent.KEYCODE_VOICE_ASSIST) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                // Route through the assist activity: the Shield remote's mic input
+                // route only attaches during an assist session.
+                try {
+                    startActivity(new Intent("android.intent.action.ASSIST")
+                            .setComponent(new android.content.ComponentName(
+                                    getPackageName(),
+                                    "com.gathin.tvhome.jarvis.JarvisVoiceActivity")));
+                } catch (Exception e) {
+                    com.gathin.tvhome.jarvis.JarvisManager jm = com.gathin.tvhome.jarvis.JarvisManager.instance;
+                    if (jm != null) jm.beginListening();
+                }
+            }
+            return true;
+        }
         // Vendor keys (TCL Netflix button, 4062) never reach the key services, only the focused window.
         if (event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()), null)) return true;
         if (handleSettingsKey(event)) return true;
@@ -1791,22 +1810,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * ShieldClaw hook: publish the hero band's normalized bounds to the node app's
-     * StatusProvider (content://com.shieldclaw.node.status, method "setHeroBounds")
-     * so its overlay panel sits exactly in the launcher's free space. No-op when
-     * the ShieldClaw app is not installed.
+     * Publish the hero band's normalized bounds to the native Jarvis panel so it
+     * sits exactly in the launcher's free space. Anchored to FIXED screen geometry
+     * (the dock row never scrolls) so the panel stays static under grid scroll.
      */
     private void reportHeroBounds() {
         try {
-            int[] loc = new int[2];
-            root.getLocationInWindow(loc);
             int sw = getResources().getDisplayMetrics().widthPixels;
             int sh = getResources().getDisplayMetrics().heightPixels;
             if (sw <= 0 || sh <= 0) return;
-            // Thin band ABOVE the hero app name, full content width (68dp padding).
-            // Anchored to FIXED screen geometry (the dock row never scrolls), not to
-            // hero.getY(), which drifts with grid scroll and dragged the panel down
-            // the screen. The band must be static: same pixels no matter what scrolls.
             float pad = 68f * density;
             float bandH = 0.26f;
             View dockChild = grid.getChildAt(0);
@@ -1818,14 +1830,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             y0 = Math.max(0.02f, Math.min(y0, 1f - bandH));
             float x0 = pad / (float) sw;
             float w0 = ((float) sw - 2f * pad) / (float) sw;
-            float h0 = bandH;
-            org.json.JSONObject b = new org.json.JSONObject();
-            b.put("x", x0); b.put("y", y0); b.put("w", w0); b.put("h", h0);
-            getContentResolver().call(
-                android.net.Uri.parse("content://com.shieldclaw.node.status"),
-                "setHeroBounds", b.toString(), null);
+            com.gathin.tvhome.jarvis.JarvisManager jm = com.gathin.tvhome.jarvis.JarvisManager.instance;
+            if (jm != null) jm.setBand(x0, y0, w0, bandH);
         } catch (Exception ignored) {
-            // provider absent (app not installed) - nothing to do
         }
     }
 
